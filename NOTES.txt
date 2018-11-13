@@ -1,0 +1,52 @@
+Where do we get the RGWBucketInfo object from?
+
+RGWReshardWait::block_while_resharing
+  called by RGWRados::block_while_resharding (no BucketInfo)
+    called by RGWRados::Bucket::UpdateIndex::guard_reshare (has BucketInfo via target)
+    called by RGWRados::guard_reshard (no BucketInfo)
+      called by RGWIndexCompletionThread::process (no BucketInfo ***)
+      called by RGWRados::bucket_index_link_olh (has BucketInfo)
+      called by RGWRados::bucket_index_unlink_instance (has BucketInfo)
+      called by RGWRados::bucket_index_read_olh_log (has BucketInfo)
+      called by RGWRados::bucket_index_trim_olh_log (has BucketInfo)
+      called by RGWRaods::bucket_index_clear_olh (has BucketInfo)
+
+RGWBucketInstanceMetadataObject
+  inherits form RGWMetadataObject
+  holds RGWBucketCompleteInfo
+    holds RGWBucketInfo
+
+RGWBucket // simple wrapper class
+  holds RGWBucketInfo
+
+bucket_info_entry
+  holds RGWBucketInfo
+
+RGWRados
+  defines Bucket
+    holds RGWBucketInfo
+    
+RGWBucketEntryPoint
+  holds RGWBucketInfo as old_bucket_info, used in versions prior to 8, currently at
+
+
+
+RGWRados::get_bucket_instance_from_oid
+RGWRados::get_bucket_instance_info
+
+
+
+bin/radosgw-admin bucket reshard --bucket=foobar  --num-shards=12
+
+RGWReshardWait::block_while_resharding
+  calls cls_rgw_client::cls_rgw_get_bucket_resharding
+    sends get_bucket_resharing_op
+      calls cls_rgw::rgw_get_bucket_resharding
+        cls_rgw::read_bucket_header
+          calls cls_cxx_map_read_header
+
+
+break BucketInfoReshardUpdate::~BucketInfoReshardUpdate
+break RGWBucketReshardIndexStatusClearer::clear_index_shard_status
+list RGWReshardWait::block_while_resharding
+break 859

@@ -1,0 +1,4 @@
+rgw_reshard_bucket_lock_duration : 120
+rgw_dynamic_resharding : true
+rgw_max_objs_per_shard : 100000
+rgw_reshard_thread_interval : 10_min
