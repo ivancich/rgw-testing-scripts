@@ -7,27 +7,17 @@ host="localhost:8000"
 count=60
 quiet="-q"
 
-errlog="log-test-resharding-$(date +%d%H%M).txt"
-
 list() {
-    s3cmd ls --host=$host s3://${bucket} 2>>$errlog | sed 's/^.* //'
-}
-
-list_bucket_infos() {
-    bin/rados -p default.rgw.meta -N root ls 2>>$errlog
-}
-
-list_bucket_indexes() {
-    bin/rados -p default.rgw.buckets.index ls 2>>$errlog
+    s3cmd ls --host=$host s3://${bucket} | sed 's/^.* //'
 }
 
 clean_reshard_locks() {
     bin/rados rm -p default.rgw.log -N reshard \
-	      $(bin/rados ls -p default.rgw.log -N reshard 2>>$errlog) 2>>$errlog
+	      $(bin/rados ls -p default.rgw.log -N reshard)
 }
 
 clean_indexes() {
-    bin/rados rm -p default.rgw.buckets.index $(bin/rados ls -p default.rgw.buckets.index 2>>$errlog) 2>>$errlog
+    bin/rados rm -p default.rgw.buckets.index $(bin/rados ls -p default.rgw.buckets.index)
 }
 
 reshard_immediate() {
@@ -36,7 +26,7 @@ reshard_immediate() {
 	exit 1
     fi
     if true ; then
-	bin/radosgw-admin bucket reshard --bucket=${bucket} --num-shards=$1 2>>$errlog
+	bin/radosgw-admin bucket reshard --bucket=${bucket} --num-shards=$1
     else
 	echo "run bucket reshard --bucket=${bucket} --num-shards=$1"
 	gdb bin/radosgw-admin
@@ -48,14 +38,14 @@ reshard_scheduled() {
 	echo "Error: reshard_scheduled needs argument"
 	exit 1
     fi
-    bin/radosgw-admin reshard add --bucket=${bucket} --num-shards=$1 2>>$errlog
-    bin/radosgw-admin reshard process 2>>$errlog
+    bin/radosgw-admin reshard add --bucket=${bucket} --num-shards=$1
+    bin/radosgw-admin reshard process
 }
 
 dump_bucket_info() {
-    for o in $(bin/radosgw-admin metadata list bucket.instance 2>>$errlog | jq ".[]" | sed 's/[",]/ /g') ; do
+    for o in $(bin/radosgw-admin metadata list bucket.instance | jq ".[]" | sed 's/[",]/ /g') ; do
 	echo "METADATA FOR $o"
-	bin/radosgw-admin metadata get bucket.instance:$o 2>>$errlog
+	bin/radosgw-admin metadata get bucket.instance:$o
     done
 }
 
@@ -65,20 +55,16 @@ echo "The quick brown fox jumped over the lazy dogs." >$object
 # bin/radosgw-admin pool add --pool=$pool
 
 echo "Building up..."
-s3cmd $quiet --host=$host mb s3://${bucket} 2>>$errlog
+s3cmd $quiet --host=$host mb s3://${bucket}
 
 for i in $(seq $count) ; do
     cp $object ${object}.${i}
-    s3cmd $quiet put --host=$host ${object}.${i} s3://${bucket} 2>>$errlog
+    s3cmd $quiet put --host=$host ${object}.${i} s3://${bucket}
     rm -f ${object}.${i}
 done
 rm -f $object
 
-if false ;then
-    dump_bucket_info
-fi
-
-echo BEFORE RESHARD
+dump_bucket_info
 
 # bin/ceph osd lspools
 # bin/radosgw-admin bi get                     retrieve bucket index object entries
@@ -90,18 +76,11 @@ echo BEFORE RESHARD
 # bin/radosgw-admin bi list                    list raw bucket index entries
 # bin/radosgw-admin bi purge                   purge bucket index entries
 
-if true ;then
-    echo "BUCKET INFO OBJECTS"
-    list_bucket_infos
-    echo "BUCKET INDEX OBJECTS"
-    list_bucket_indexes
-    echo "===="
-fi
+bin/rados -p default.rgw.buckets.index ls
 
-if false ;then
-    echo Reshard Locks BEFORE
-    bin/rados ls -p default.rgw.log -N reshard 2>>$errlog
-fi
+echo Reshard Locks BEFORE
+bin/rados ls -p default.rgw.log -N reshard
+echo "===="
 
 starttime=$(date)
 
@@ -110,7 +89,7 @@ if false ;then
 fi
 
 if true ;then
-    reshard_immediate 9
+    reshard_immediate 9;
 fi
 
 sleep 10
@@ -125,29 +104,15 @@ fi
 
 endtime=$(date)
 
-echo AFTER RESHARD
+echo Reshard Locks AFTER
+bin/rados ls -p default.rgw.log -N reshard
+echo "===="
 
-if true ;then
-    echo "BUCKET INFO OBJECTS"
-    list_bucket_infos
-    echo "BUCKET INDEX OBJECTS"
-    list_bucket_indexes
-    echo "===="
-fi
-
-if false ;then
-    echo Reshard Locks AFTER
-    bin/rados ls -p default.rgw.log -N reshard 2>>$errlog
-    echo "===="
-fi
-
-if false ;then
-    dump_bucket_info
-fi
+dump_bucket_info
 
 if false ;then
     echo "Cleaning up..."
-    s3cmd $quiet rb -r --force s3://${bucket} 2>>$errlog
+    s3cmd $quiet rb -r --force s3://${bucket}
     clean_indexes
 fi
 

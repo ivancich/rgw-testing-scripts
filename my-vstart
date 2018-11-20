@@ -1,3 +1,5 @@
 #!/usr/bin/env bash
 
 ../src/vstart.sh -k -d -l -b --short 
+
+sleep 10 ; bell
