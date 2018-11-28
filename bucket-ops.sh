@@ -18,6 +18,12 @@ bin/radosgw-admin metadata get bucket.instance:
 
 e.g., bin/radosgw-admin metadata get bucket.instance:reshard-test:6717b904-e35b-42c9-b8bf-f950fb84e345.14109.1
 
+bin/radosgw-admin bucket reshard --bucket=reshard-test --num-shards=16
+
+bin/radosgw-admin reshard stale-instances list
+bin/radosgw-admin reshard stale-instances delete
+
+
 == S3CMD ==
 
 s3cmd ls s3://reshard-test             # list bucket
