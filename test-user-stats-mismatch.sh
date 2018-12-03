@@ -1,12 +1,11 @@
 #!/bin/bash
 
-pool=myrgwpool
-user="admin"
-bucket=bucket0
-versioned=0
+user=testid
+bucket=bucket1
+versioned=1
 object=myobj
 host="localhost:8000"
-count=10
+count=1000
 quiet="-q"
 
 errlog="log-test-resharding-$(date +%d%H%M%S).txt"
@@ -70,19 +69,21 @@ dump_bucket_info() {
 }
 
 bucket_stats() {
-    if [ $# -eq 0 ] ; then
-	bin/radosgw-admin bucket stats --bucket $bucket
+    if [ $# -eq 0 ] ;then
+	bin/radosgw-admin bucket stats --bucket $bucket 2>>$errlog
     else
-	bin/radosgw-admin bucket stats --bucket $1
+	bin/radosgw-admin bucket stats --bucket $1 2>>$errlog
     fi
 }
 
 user_stats() {
-    if [ $# -eq 0 ] ; then
-	bin/radosgw-admin user stats --uid $user
+set -x
+    if [ $# -eq 0 ] ;then 
+	bin/radosgw-admin user stats --uid $user --sync-stats 2>>$errlog
     else
-	bin/radosgw-admin user stats --uid $1
+	bin/radosgw-admin user stats --uid $1 --sync-stats 2>>$errlog
     fi
+set +x
 }
 
 echo "The quick brown fox jumped over the lazy dogs." >$object
@@ -104,56 +105,16 @@ done
 rm -f $object
 
 
+echo "=== bucket stats ==="
 bucket_stats
 
+echo "=== user stats ==="
 user_stats
 
-
-
-
-
-
-
-exit 0
-
-bucket_stats
-# list_bucket_metadata
-# list_bucket_entrypoints
-
-echo "## resharding"
+echo "=== resharding ==="
 reshard_immediate 4
 
-bucket_stats
-# list_bucket_metadata
-# list_bucket_entrypoints
+echo "=== user stats ==="
+user_stats
 
-echo "## replacing object.3"
-echo "foobar" >${object}.3
-s3cmd $quiet put --host=$host ${object}.3 s3://${bucket} 2>>$errlog
-rm -f ${object}.3
-
-bucket_stats
-
-echo "## resharding"
-reshard_immediate 5
-
-bucket_stats
-
-echo "## removing object.4"
-s3cmd $quiet rm s3://${bucket}/${object}.4 2>>$errlog
-
-bucket_stats
-
-echo "## resharding"
-reshard_immediate 6
-
-bucket_stats
-
-if false ;then
-    echo "Cleaning up..."
-    s3cmd $quiet rb -r --force s3://${bucket} 2>>$errlog
-    clean_indexes
-fi
-
-# list_bucket_metadata
-# list_bucket_entrypoints
+echo Done
