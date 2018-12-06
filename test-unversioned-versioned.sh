@@ -4,11 +4,11 @@ greptext="--binary-file=text"
 suffix=$(date +%H%M%S)
 
 s/my-new-vstart
-s/test-user-stats-mismatch.sh no >unversioned-${suffix}.out
+s/test-user-stats-multipart-mismatch.sh no >unversioned-${suffix}.out
 ../src/stop.sh
 
 s/my-new-vstart
-s/test-user-stats-mismatch.sh yes >versioned-${suffix}.out
+s/test-user-stats-multipart-mismatch.sh yes >versioned-${suffix}.out
 ../src/stop.sh
 
 first=1
