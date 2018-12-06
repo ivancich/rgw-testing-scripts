@@ -1,12 +1,26 @@
 #!/bin/bash
 
 user=testid
-bucket=bucket1
-versioned=1
+bucket="bucket$(date +%H%M%S)"
 object=myobj
 host="localhost:8000"
-count=1000
+count=100
 quiet="-q"
+
+usage() {
+    echo "Usage: $0 yes|no"
+    exit 1
+}
+
+if [ $# -ne 1 ] ;then
+    usage
+elif [ $1 == "yes" ] ;then
+    versioned=1
+elif [ $1 == "no" ] ; then
+    versioned=0
+else
+    usage
+fi
 
 errlog="log-test-resharding-$(date +%d%H%M%S).txt"
 
@@ -77,13 +91,11 @@ bucket_stats() {
 }
 
 user_stats() {
-set -x
     if [ $# -eq 0 ] ;then 
 	bin/radosgw-admin user stats --uid $user --sync-stats 2>>$errlog
     else
 	bin/radosgw-admin user stats --uid $1 --sync-stats 2>>$errlog
     fi
-set +x
 }
 
 echo "The quick brown fox jumped over the lazy dogs." >$object
@@ -92,9 +104,11 @@ echo "The quick brown fox jumped over the lazy dogs." >$object
 echo "Building up..."
 s3cmd $quiet --host=$host mb s3://${bucket} 2>>$errlog
 
-if [ "$versioned" == 1 ] ;then
+if [ "$versioned" -eq 1 ] ;then
     echo making bucket versioned
     bucket-enable-versioning.sh $bucket
+else
+    echo leaving bucket unversioned
 fi
 
 for i in $(seq $count) ; do
